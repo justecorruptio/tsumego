@@ -6,6 +6,7 @@ BOARD_EDGE = '+'
 BOARD_BLACK = 'X'
 BOARD_WHITE = 'O'
 
+
 class Board(object):
     def __init__(self):
         self.parent = None
@@ -20,56 +21,24 @@ class Board(object):
         other = color == BOARD_BLACK and BOARD_WHITE or BOARD_BLACK
 
         x += 1; y += 1;
-        w, h = self.width + 2, self.height + 2
-        if self.goban[x * h + y] != BOARD_EMPTY:
+        h = self.height + 2
+        pos = x * (self.height + 2) + y
+
+        if self.goban[pos] != BOARD_EMPTY:
             return None, 0
 
         child = self.copy()
         child.parent = self
 
-        child.goban[x * h + y] = color
-
-        def _has_libs(goban, x, y, color, other):
-            marks = [0] * len(goban)
-            def _recur(pos):
-                if goban[pos] == BOARD_EMPTY:
-                    return True
-                if marks[pos] or goban[pos] != color:
-                    return False
-                marks[pos] = 1
-                return (
-                    _recur(pos + h) or
-                    _recur(pos - h) or
-                    _recur(pos + 1) or
-                    _recur(pos - 1)
-                )
-            return _recur(x * h + y)
-
-        def _kill(goban, x, y, color, other):
-            marks = [0] * len(goban)
-            def _recur(pos):
-                if marks[pos] or goban[pos] != color:
-                    return 0
-                goban[pos] = BOARD_EMPTY
-                marks[pos] = 1
-
-                return (
-                    _recur(pos + h) +
-                    _recur(pos - h) +
-                    _recur(pos + 1) +
-                    _recur(pos - 1) +
-                    1
-                )
-
-            return _recur(x * h + y)
+        child.goban[pos] = color
 
         killed = 0
-        for a, b in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
-            elem = child.goban[a * h + b]
-            if elem == other and not _has_libs(child.goban, a, b, other, color):
-                killed += _kill(child.goban, a, b, other, color)
+        for tonari in (pos + h, pos - h, pos + 1, pos - 1):
+            elem = child.goban[tonari]
+            if elem == other and not child.has_libs(tonari, other, color):
+                killed += child.kill(tonari, other, color)
 
-        if not killed and not _has_libs(child.goban, x, y, color, other):
+        if not killed and not child.has_libs(pos, color, other):
             return None, 0
 
         ancestor = self
@@ -80,39 +49,71 @@ class Board(object):
 
         return child, killed
 
+    def has_libs(self, pos, color, other):
+        h = self.height + 2
+        goban = self.goban
+        marks = [0] * len(goban)
+        def _recur(pos):
+            if goban[pos] == BOARD_EMPTY:
+                return True
+            if marks[pos] or goban[pos] != color:
+                return False
+            marks[pos] = 1
+            return (
+                _recur(pos + h) or
+                _recur(pos - h) or
+                _recur(pos + 1) or
+                _recur(pos - 1)
+            )
+        return _recur(pos)
+
+    def kill(self, pos, color, other):
+        h = self.height + 2
+        goban = self.goban
+        marks = [0] * len(goban)
+        def _recur(pos):
+            if marks[pos] or goban[pos] != color:
+                return 0
+            goban[pos] = BOARD_EMPTY
+            marks[pos] = 1
+
+            return (
+                _recur(pos + h) +
+                _recur(pos - h) +
+                _recur(pos + 1) +
+                _recur(pos - 1) +
+                1
+            )
+
+        return _recur(pos)
+
     def get_empty(self):
         h, w = self.height + 2, self.width + 2
         ret = []
-        for x in xrange(1, self.width + 1):
-            for y in xrange(1, self.height + 1):
+        x_list = range(1, self.width + 1)
+        y_list = range(1, self.height + 1)
+        for x in x_list:
+            for y in y_list:
                 if self.goban[x * h + y] == BOARD_EMPTY:
                     ret.append((x - 1, y - 1))
-        #if len(ret) <= 2:
         ret.append((-1, -1))
         return ret
 
     def count(self, color):
-        h, w = self.height + 2, self.width + 2
         ret = 0
-        for x in xrange(1, self.width + 1):
-            for y in xrange(1, self.height + 1):
-                if self.goban[x * h + y] == color:
-                    ret += 1
+        for elem in self.goban:
+            if elem == color:
+                ret += 1
         return ret
 
     def hash(self):
         return ''.join(self.goban)
 
     def copy(self):
-        bkp_parent = self.parent
-        self.parent = None
-        #new_board = copy.deepcopy(self)
         new_board = Board()
         new_board.height = self.height
         new_board.width = self.width
-        new_board.goban = [x[:] for x in self.goban]
-
-        self.parent = bkp_parent
+        new_board.goban = self.goban[:]
         return new_board
 
     def load(self, pos_string):
