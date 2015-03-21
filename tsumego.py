@@ -6,7 +6,7 @@ from board import (
     BOARD_WHITE,
 )
 
-MAX_DEBUG_DEPTH = 2
+MAX_DEBUG_DEPTH = 1
 MAX_DEPTH = 200
 
 
@@ -19,13 +19,18 @@ class Solver(object):
 
         mem = {}
 
+        good_as_dead = int(self.board.count(other) * .33)
+
         def _find_killer(board, depth=0):
             if depth > MAX_DEPTH:
                 raise Exception("too deep")
+                #return None
 
             hx = board.hash()
             if hx in mem:
                 return mem[hx]
+
+            #print board
 
             prospects = board.get_empty()
 
@@ -33,17 +38,24 @@ class Solver(object):
                 x, y = prospects.pop()
                 if x == -1 and y == -1:
                     continue
-                after_me = board.play(x, y, color)
+                after_me, killed = board.play(x, y, color)
                 if after_me is None:
                     continue
                 if depth <= MAX_DEBUG_DEPTH:
                     print '  ' * depth, "X:", (x, y)
-                if after_me.count(other) < 5:
+                if killed > good_as_dead or after_me.count(other) < 5:
                     ret = [(x, y, color)]
                     mem[hx] = ret
                     return ret
 
+                # other player can play direct ko
+                #hist_bkp = after_me.parent
+                #after_me.parent = after_me.parent.parent
+
                 sol = _find_refute(after_me, depth + 1)
+
+                #after_me.parent = hist_bkp
+
                 if sol is None:
                     ret = [(x, y, color)]
                     mem[hx] = ret
@@ -65,9 +77,10 @@ class Solver(object):
                 return jar[hx]
 
             for a, b in after_me.get_empty():
-                after_them = after_me.play(a, b, other)
+                after_them, killed = after_me.play(a, b, other)
                 if after_them is None:
                     continue
+                #if killed == 1:
                 if depth <= MAX_DEBUG_DEPTH:
                     print '  ' * depth, "O:", (a, b)
                 sol = _find_killer(after_them, depth + 1)
@@ -84,17 +97,18 @@ class Solver(object):
         t = self.board
         print t
         for i, (x, y, col) in enumerate(solution[:10]):
-            t = t.play(x, y, col)
+            t, killed = t.play(x, y, col)
             print t
 
 
 if __name__ == '__main__':
     b = Board()
-    b.load(open('data/001_goban.txt', 'r').read())
+    b.load(open('data/004_goban.txt', 'r').read())
 
     s = Solver(b)
-    #s.find_kill()
+    s.find_kill()
 
+    '''
     import cProfile
     import pstats
     import StringIO
@@ -104,3 +118,4 @@ if __name__ == '__main__':
     stats.sort_stats('time')
     stats.print_stats()
     print stream.getvalue()
+    '''

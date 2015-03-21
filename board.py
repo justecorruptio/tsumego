@@ -15,14 +15,14 @@ class Board(object):
         if x == -1 and y == -1:
             child = self.copy()
             child.parent = self
-            return child
+            return child, 0
 
         other = color == BOARD_BLACK and BOARD_WHITE or BOARD_BLACK
 
         x += 1; y += 1;
         w, h = self.width + 2, self.height + 2
         if self.goban[x * h + y] != BOARD_EMPTY:
-            return None
+            return None, 0
 
         child = self.copy()
         child.parent = self
@@ -32,11 +32,9 @@ class Board(object):
         def _has_libs(goban, x, y, color, other):
             marks = [0] * len(goban)
             def _recur(pos):
-                if marks[pos]:
-                    return False
                 if goban[pos] == BOARD_EMPTY:
                     return True
-                if goban[pos] != color:
+                if marks[pos] or goban[pos] != color:
                     return False
                 marks[pos] = 1
                 return (
@@ -51,34 +49,36 @@ class Board(object):
             marks = [0] * len(goban)
             def _recur(pos):
                 if marks[pos] or goban[pos] != color:
-                    return
+                    return 0
                 goban[pos] = BOARD_EMPTY
                 marks[pos] = 1
 
-                _recur(pos + h)
-                _recur(pos - h)
-                _recur(pos + 1)
-                _recur(pos - 1)
+                return (
+                    _recur(pos + h) +
+                    _recur(pos - h) +
+                    _recur(pos + 1) +
+                    _recur(pos - 1) +
+                    1
+                )
 
             return _recur(x * h + y)
 
-        killing = False
+        killed = 0
         for a, b in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
             elem = child.goban[a * h + b]
             if elem == other and not _has_libs(child.goban, a, b, other, color):
-                killing = True
-                _kill(child.goban, a, b, other, color)
+                killed += _kill(child.goban, a, b, other, color)
 
-        if not killing and not _has_libs(child.goban, x, y, color, other):
-            return None
+        if not killed and not _has_libs(child.goban, x, y, color, other):
+            return None, 0
 
         ancestor = self
         while ancestor is not None:
             if child.goban == ancestor.goban:
-                return None
+                return None, -1
             ancestor = ancestor.parent
 
-        return child
+        return child, killed
 
     def get_empty(self):
         h, w = self.height + 2, self.width + 2
@@ -87,8 +87,8 @@ class Board(object):
             for y in xrange(1, self.height + 1):
                 if self.goban[x * h + y] == BOARD_EMPTY:
                     ret.append((x - 1, y - 1))
-        if len(ret) <= 2:
-            ret.append((-1, -1))
+        #if len(ret) <= 2:
+        ret.append((-1, -1))
         return ret
 
     def count(self, color):
