@@ -41,16 +41,19 @@ class Board(object):
         if not killed and not child.has_libs(pos, color, other):
             return None, 0
 
-        ancestor = self
-        while ancestor is not None:
-            if child.goban == ancestor.goban:
-                return None, -1
-            ancestor = ancestor.parent
+        if killed:
+            ancestor = self
+            while ancestor is not None:
+                if child.goban == ancestor.goban:
+                    return None, -1
+                ancestor = ancestor.parent
 
         return child, killed
 
     def has_libs(self, pos, color, other):
         h = self.height + 2
+        if self.unkillable[pos]:
+            return True
         goban = self.goban
         marks = [0] * len(goban)
         def _recur(pos):
@@ -114,6 +117,7 @@ class Board(object):
         new_board.height = self.height
         new_board.width = self.width
         new_board.goban = self.goban[:]
+        new_board.unkillable = self.unkillable
         return new_board
 
     def load(self, pos_string):
@@ -123,6 +127,7 @@ class Board(object):
         self.width = len(rows[0])
         h, w = self.height + 2, self.width + 2
         self.goban = [BOARD_EMPTY] * (h * w)
+
         for x in xrange(self.width):
             for y in xrange(self.height):
                 self.goban[(x + 1) * h + y + 1] = {
@@ -133,6 +138,34 @@ class Board(object):
                     'X': BOARD_BLACK,
                     'O': BOARD_WHITE,
                 }.get(rows[y][x])
+
+        self.unkillable = [0] * (h * w)
+
+        def mark_unkillable(pos):
+            color = self.goban[pos]
+            if color not in (BOARD_BLACK, BOARD_WHITE):
+                return
+
+            def _recur(pos):
+                if self.goban[pos] != color or self.unkillable[pos]:
+                    return
+                self.unkillable[pos] = 1
+                _recur(pos + h)
+                _recur(pos - h)
+                _recur(pos + 1)
+                _recur(pos - 1)
+
+            return _recur(pos)
+
+        for x in xrange(self.width):
+            mark_unkillable((x + 1) * h + 1)
+            mark_unkillable((x + 1) * h + self.height)
+
+        for y in xrange(self.height):
+            mark_unkillable(h + y)
+            mark_unkillable(self.width * h + y)
+
+        self.unkillable = tuple(self.unkillable)
 
     def __str__(self):
         h, w = self.height + 2, self.width + 2
