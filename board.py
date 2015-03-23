@@ -90,16 +90,28 @@ class Board(object):
 
         return _recur(pos)
 
+    def is_lonely(self, x, y):
+        x += 1; y += 1
+        h = self.height + 2
+        libs = 0
+        pos = x * h + y
+        color = self.goban[pos]
+        for tonari in (pos + h, pos - h, pos + 1, pos - 1):
+            if self.goban[tonari] == BOARD_EMPTY:
+                libs += 1
+            if self.goban[tonari] == color:
+                return False
+        return libs == 1
+
     def get_empty(self):
         h, w = self.height + 2, self.width + 2
-        ret = []
+        ret = [(-1, -1)]
         x_list = range(1, self.width + 1)
         y_list = range(1, self.height + 1)
         for x in x_list:
             for y in y_list:
                 if self.goban[x * h + y] == BOARD_EMPTY:
                     ret.append((x - 1, y - 1))
-        ret.append((-1, -1))
         return ret
 
     def count(self, color):
