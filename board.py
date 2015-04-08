@@ -56,19 +56,23 @@ class Board(object):
             return True
         goban = self.goban
         marks = [0] * len(goban)
-        def _recur(pos):
+
+        stack = [pos]
+        while stack:
+            pos = stack.pop()
             if goban[pos] == BOARD_EMPTY:
                 return True
             if marks[pos] or goban[pos] != color:
-                return False
+                continue
             marks[pos] = 1
-            return (
-                _recur(pos + h) or
-                _recur(pos - h) or
-                _recur(pos + 1) or
-                _recur(pos - 1)
-            )
-        return _recur(pos)
+            stack.extend((
+                pos + h,
+                pos - h,
+                pos + 1,
+                pos - 1,
+            ))
+
+        return False
 
     def kill(self, pos, color, other):
         h = self.height + 2
@@ -112,6 +116,10 @@ class Board(object):
             for y in y_list:
                 if self.goban[x * h + y] == BOARD_EMPTY:
                     ret.append((x - 1, y - 1))
+
+        mh = h >> 1
+        mw = w >> 1
+        ret.sort(key=lambda v: abs(v[0] - mw) + abs(v[1] - mh))
         return ret
 
     def count(self, color):

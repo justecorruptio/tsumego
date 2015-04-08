@@ -8,7 +8,7 @@ from board import (
     BOARD_WHITE,
 )
 
-MAX_DEBUG_DEPTH = 1
+MAX_DEBUG_DEPTH = -1
 MAX_DEPTH = 200
 
 
@@ -122,9 +122,10 @@ class Solver(object):
 
 if __name__ == '__main__':
     b = Board()
-    b.load(open('data/001_goban.txt', 'r').read())
+    b.load(open('data/002_goban.txt', 'r').read())
 
     s = Solver(b)
+    '''
     s.find_kill()
 
     '''
@@ -137,4 +138,3 @@ if __name__ == '__main__':
     stats.sort_stats('time')
     stats.print_stats()
     print stream.getvalue()
-    '''
