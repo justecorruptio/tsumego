@@ -8,7 +8,7 @@ from board import (
     BOARD_WHITE,
 )
 
-MAX_DEBUG_DEPTH = -1
+MAX_DEBUG_DEPTH = 0
 MAX_DEPTH = 200
 
 
@@ -24,13 +24,14 @@ class Solver(object):
 
         mem = {}
         good_as_dead = int(self.board.count(other) * .33)
-        def _find_killer(board, depth=0):
+        def _find_killer(board, path=()):
+            depth = len(path)
             if depth > MAX_DEPTH:
                 raise Exception("too deep")
                 #return None
 
             hx = board.hash()
-            if hx in mem:
+            if hx in mem and mem[hx] is not None:
                 self.cache_hits += 1
                 return mem[hx]
             self.cache_misses += 1
@@ -44,7 +45,12 @@ class Solver(object):
                 x, y = prospects.pop()
                 if x == -1 and y == -1:
                     continue
+
+                parent = board.parent
+                board.parent = None
                 after_me, killed = board.play(x, y, color)
+                board.parent = parent
+
                 if after_me is None:
                     continue
                 if depth <= MAX_DEBUG_DEPTH:
@@ -54,9 +60,9 @@ class Solver(object):
                     break
 
                 if killed == 1 and after_me.is_lonely(x, y):
-                    after_me, killed = after_me.parent.play(x, y, other)
+                    after_me, _ = after_me.parent.play(x, y, other)
 
-                sol = _find_refute(after_me, depth + 1)
+                sol = _find_refute(after_me, path + ((x, y, 'X'),))
 
                 if sol is None:
                     ret = (x, y)
@@ -69,16 +75,26 @@ class Solver(object):
                     if depth <= MAX_DEBUG_DEPTH:
                         print '  ' * depth, "r:", sol
                     pass
+            #if hx in mem and mem[hx] != ret:
+            #    print "DIFFERENCE!!!"
+            #    print "MEM:", mem[hx]
+            #    print "RET:", ret
+            #    print board
             mem[hx] = ret
             return ret
 
         jar = {}
-        def _find_refute(after_me, depth):
+        def _find_refute(after_me, path=()):
+
+            depth = len(path)
             hx = after_me.hash()
             if hx in jar:
+                self.cache_hits += 1
                 return jar[hx]
+            self.cache_misses += 1
 
             prospects = after_me.get_empty()
+            ret = None
             while prospects:
                 a, b = prospects.pop()
                 after_them, killed = after_me.play(a, b, other)
@@ -90,20 +106,20 @@ class Solver(object):
 
                 if killed == 1 and after_them.is_lonely(a, b):
                     # direct ko, give white another move
-                    if _find_refute(after_them, depth + 1):
-                        jar[hx] = (a, b)
-                        return (a, b)
+                    if _find_refute(after_them, path + ((a, b, 'O'),)):
+                        ret = (a, b)
+                        break
 
-                sol = _find_killer(after_them, depth + 1)
+                sol = _find_killer(after_them, path + ((a, b, 'O'),))
                 if sol is None:
-                    jar[hx] = (a, b)
-                    return (a, b)
+                    ret = (a, b)
+                    break
                 else:
                     if sol in prospects:
                         prospects.remove(sol)
                         prospects.append(sol)
-            jar[hx] = None
-            return None
+            jar[hx] = ret
+            return ret
 
         solution = _find_killer(self.board)
         print solution
@@ -122,10 +138,9 @@ class Solver(object):
 
 if __name__ == '__main__':
     b = Board()
-    b.load(open('data/002_goban.txt', 'r').read())
+    b.load(open('data/004_goban.txt', 'r').read())
 
     s = Solver(b)
-    '''
     s.find_kill()
 
     '''
@@ -138,3 +153,4 @@ if __name__ == '__main__':
     stats.sort_stats('time')
     stats.print_stats()
     print stream.getvalue()
+    '''

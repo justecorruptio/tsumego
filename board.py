@@ -119,7 +119,7 @@ class Board(object):
 
         mh = h >> 1
         mw = w >> 1
-        ret.sort(key=lambda v: abs(v[0] - mw) + abs(v[1] - mh))
+        ret.sort(key=lambda v: -abs(v[0] - mw) - abs(v[1] - mh))
         return ret
 
     def count(self, color):
