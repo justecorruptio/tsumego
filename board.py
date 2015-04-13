@@ -10,6 +10,7 @@ BOARD_WHITE = 'O'
 class Board(object):
     def __init__(self):
         self.parent = None
+        self._hash = None
 
     def play(self, x, y, color):
 
@@ -44,7 +45,7 @@ class Board(object):
         if killed:
             ancestor = self
             while ancestor is not None:
-                if child.goban == ancestor.goban:
+                if child.hash() == ancestor.hash():
                     return None, -1
                 ancestor = ancestor.parent
 
@@ -138,7 +139,9 @@ class Board(object):
         return ret
 
     def hash(self):
-        return ''.join(self.goban)
+        if not self._hash:
+            self._hash = ''.join(self.goban)
+        return self._hash
 
     def copy(self):
         new_board = Board()

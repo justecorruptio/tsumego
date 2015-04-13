@@ -141,6 +141,7 @@ if __name__ == '__main__':
     b.load(open('data/002_goban.txt', 'r').read())
 
     s = Solver(b)
+    '''
     s.find_kill()
 
     '''
@@ -153,4 +154,3 @@ if __name__ == '__main__':
     stats.sort_stats('time')
     stats.print_stats()
     print stream.getvalue()
-    '''
