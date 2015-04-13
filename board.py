@@ -55,29 +55,38 @@ class Board(object):
         if self.unkillable[pos]:
             return True
         goban = self.goban
-        marks = [0] * len(goban)
 
-        stack = [pos]
-        while stack:
-            pos = stack.pop()
+        # must copy
+        marks = self.marks[:]
+
+        stack = []
+        ptr = 0
+        while True:
             if goban[pos] == BOARD_EMPTY:
                 return True
             if marks[pos] or goban[pos] != color:
+                if ptr >= len(stack):
+                    return False
+                pos = stack[ptr]
+                ptr += 1
                 continue
             marks[pos] = 1
             stack.extend((
                 pos + h,
                 pos - h,
                 pos + 1,
-                pos - 1,
             ))
+            pos -= 1
 
         return False
 
     def kill(self, pos, color, other):
         h = self.height + 2
         goban = self.goban
-        marks = [0] * len(goban)
+
+        # must copy
+        marks = self.marks[:]
+
         def _recur(pos):
             if marks[pos] or goban[pos] != color:
                 return 0
@@ -110,16 +119,15 @@ class Board(object):
     def get_empty(self):
         h, w = self.height + 2, self.width + 2
         ret = [(-1, -1)]
-        x_list = range(1, self.width + 1)
-        y_list = range(1, self.height + 1)
-        for x in x_list:
-            for y in y_list:
+        for x in self.x_range:
+            for y in self.y_range:
                 if self.goban[x * h + y] == BOARD_EMPTY:
                     ret.append((x - 1, y - 1))
 
         mh = h >> 1
         mw = w >> 1
         ret.sort(key=lambda v: -abs(v[0] - mw) - abs(v[1] - mh))
+        # We use this in reverse order later.
         return ret
 
     def count(self, color):
@@ -137,6 +145,12 @@ class Board(object):
         new_board.height = self.height
         new_board.width = self.width
         new_board.goban = self.goban[:]
+
+        # OK to reference first items, we make a copy anyways
+        new_board.marks = self.marks
+        new_board.x_range = self.x_range
+        new_board.y_range = self.y_range
+
         new_board.unkillable = self.unkillable
         return new_board
 
@@ -147,6 +161,9 @@ class Board(object):
         self.width = len(rows[0])
         h, w = self.height + 2, self.width + 2
         self.goban = [BOARD_EMPTY] * (h * w)
+        self.marks = [0] * len(self.goban)
+        self.x_range = range(1, self.width + 1)
+        self.y_range = range(1, self.height + 1)
 
         for x in xrange(self.width):
             for y in xrange(self.height):
@@ -190,8 +207,8 @@ class Board(object):
     def __str__(self):
         h, w = self.height + 2, self.width + 2
         ret = ''
-        for y in xrange(1, self.height + 1):
-            for x in xrange(1, self.width + 1):
+        for y in self.y_range:
+            for x in self.x_range:
                 elem = self.goban[x * h + y]
                 if elem == BOARD_EMPTY:
                     c = '. '

@@ -138,7 +138,7 @@ class Solver(object):
 
 if __name__ == '__main__':
     b = Board()
-    b.load(open('data/004_goban.txt', 'r').read())
+    b.load(open('data/002_goban.txt', 'r').read())
 
     s = Solver(b)
     s.find_kill()
